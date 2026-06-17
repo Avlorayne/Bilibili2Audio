@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bilibili2Audio - 启动中</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="launcher-container">
+    <!-- 背景装饰 -->
+    <div class="bg-orbs">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Logo 区域 -->
+    <div class="logo-section">
+      <div class="logo-ring">
+        <div class="logo-icon">
+          <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="2" opacity="0.3"/>
+            <circle cx="32" cy="32" r="20" stroke="currentColor" stroke-width="1.5" opacity="0.5"/>
+            <path d="M24 20L24 44" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            <path d="M24 28C24 28 28 24 36 28C44 32 44 36 44 36" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M24 44C24 44 28 40 36 44C44 48 44 44 44 44" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+      </div>
+      <h1 class="app-title">Bilibili2Audio</h1>
+      <p class="app-subtitle">跨平台视频转音频工具</p>
+    </div>
+
+    <!-- 进度条 -->
+    <div class="progress-section">
+      <div class="progress-track">
+        <div class="progress-fill" id="progressFill"></div>
+      </div>
+      <span class="progress-label" id="progressLabel">正在准备...</span>
+    </div>
+
+    <!-- 状态步骤 -->
+    <div class="steps-section" id="stepsList">
+      <div class="step" data-step="env">
+        <div class="step-indicator">
+          <div class="step-dot"></div>
+          <div class="step-icon">
+            <svg viewBox="0 0 16 16" class="check-icon"><path d="M13.5 4.5L6.5 11.5L3 8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <div class="step-content">
+          <span class="step-title">检查运行环境</span>
+          <span class="step-desc" id="stepEnvDesc">检测 Node.js 和系统依赖...</span>
+        </div>
+      </div>
+      <div class="step" data-step="deps">
+        <div class="step-indicator">
+          <div class="step-dot"></div>
+          <div class="step-icon">
+            <svg viewBox="0 0 16 16" class="check-icon"><path d="M13.5 4.5L6.5 11.5L3 8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <div class="step-content">
+          <span class="step-title">安装项目依赖</span>
+          <span class="step-desc" id="stepDepsDesc">检查 npm 依赖包...</span>
+        </div>
+      </div>
+      <div class="step" data-step="start">
+        <div class="step-indicator">
+          <div class="step-dot"></div>
+          <div class="step-icon">
+            <svg viewBox="0 0 16 16" class="check-icon"><path d="M13.5 4.5L6.5 11.5L3 8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <div class="step-content">
+          <span class="step-title">启动后端服务</span>
+          <span class="step-desc" id="stepStartDesc">正在启动 Bilibili2Audio 服务...</span>
+        </div>
+      </div>
+      <div class="step" data-step="ready">
+        <div class="step-indicator">
+          <div class="step-dot"></div>
+          <div class="step-icon">
+            <svg viewBox="0 0 16 16" class="check-icon"><path d="M13.5 4.5L6.5 11.5L3 8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+        </div>
+        <div class="step-content">
+          <span class="step-title">准备就绪</span>
+          <span class="step-desc" id="stepReadyDesc">即将跳转到主页面...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 错误区域 -->
+    <div class="error-section d-none" id="errorSection">
+      <div class="error-icon">
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
+          <path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <circle cx="12" cy="15.5" r="1" fill="currentColor"/>
+        </svg>
+      </div>
+      <p class="error-title">启动失败</p>
+      <p class="error-message" id="errorMessage">-</p>
+      <button class="error-retry" id="retryBtn" onclick="location.reload()">重试</button>
+    </div>
+
+    <!-- 底部 -->
+    <div class="footer-section">
+      <span class="version-label">v1.0.0</span>
+      <span class="status-badge" id="statusBadge">启动中</span>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

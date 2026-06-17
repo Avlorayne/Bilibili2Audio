@@ -3,5 +3,5 @@
 # 双击此文件即可启动程序
 
 cd "$(dirname "$0")"
-chmod +x 启动.sh
-./启动.sh
+chmod +x start.sh
+./start.sh

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Bilibili2Audio 启动脚本 (Linux)
+# 优先使用 starter.js（启动管理器），回退到传统启动方式
 
 echo "=========================================="
 echo "  Bilibili2Audio - 视频转音频工具"
@@ -37,33 +38,43 @@ fi
 NPM_VERSION=$(npm -v)
 echo "✅ npm版本: $NPM_VERSION"
 
-# 检查npm依赖
-if [ ! -d "node_modules" ]; then
-    echo "📦 正在安装依赖..."
-    npm install
-    if [ $? -ne 0 ]; then
-        echo "❌ 依赖安装失败"
-        exit 1
-    fi
-    echo "✅ 依赖安装完成"
+# 检查 starter.js 是否存在
+if [ -f "starter.js" ]; then
+    echo "🚀 正在启动启动管理器..."
+    echo ""
+    exec node starter.js
 else
-    echo "✅ 依赖已安装"
-fi
+    echo "⚠️  未找到 starter.js，回退到传统启动方式..."
+    echo ""
 
-# 检查FFmpeg
-if ! command -v ffmpeg &> /dev/null; then
-    echo "⚠️  警告: 未找到FFmpeg"
-    echo ""
-    echo "FFmpeg是必需的依赖，请安装:"
-    echo "  Ubuntu/Debian: sudo apt install ffmpeg"
-    echo "  CentOS/RHEL: sudo yum install ffmpeg"
-    echo ""
-    echo "程序将尝试继续运行，但本地视频转换功能将不可用。"
-    echo ""
-fi
+    # 检查npm依赖
+    if [ ! -d "node_modules" ]; then
+        echo "📦 正在安装依赖..."
+        npm install
+        if [ $? -ne 0 ]; then
+            echo "❌ 依赖安装失败"
+            exit 1
+        fi
+        echo "✅ 依赖安装完成"
+    else
+        echo "✅ 依赖已安装"
+    fi
 
-# 启动服务
-echo ""
-echo "🚀 正在启动服务..."
-echo ""
-node src/backend/server.js
+    # 检查FFmpeg
+    if ! command -v ffmpeg &> /dev/null; then
+        echo "⚠️  警告: 未找到FFmpeg"
+        echo ""
+        echo "FFmpeg是必需的依赖，请安装:"
+        echo "  Ubuntu/Debian: sudo apt install ffmpeg"
+        echo "  CentOS/RHEL: sudo yum install ffmpeg"
+        echo ""
+        echo "程序将尝试继续运行，但本地视频转换功能将不可用。"
+        echo ""
+    fi
+
+    # 启动服务
+    echo ""
+    echo "🚀 正在启动服务..."
+    echo ""
+    node src/backend/server.js
+fi

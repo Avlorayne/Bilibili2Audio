@@ -1,6 +1,6 @@
 {
   "name": "bilibili2audio",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "跨平台视频转音频工具，支持本地视频和B站链接",
   "main": "src/backend/server.js",
   "scripts": {

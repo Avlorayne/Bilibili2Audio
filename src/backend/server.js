@@ -116,12 +116,14 @@ async function startServer() {
       logger.info(`服务已启动: http://${HOST}:${PORT}`);
       console.log(`\n✅ 服务已启动: http://${HOST}:${PORT}\n`);
       
-      // 自动打开浏览器
-      try {
-        await open(`http://${HOST}:${PORT}`);
-        logger.info('已自动打开浏览器');
-      } catch (e) {
-        logger.warn('无法自动打开浏览器，请手动访问');
+      // 通过 starter.js 启动时，跳过自动打开浏览器（starter 已处理）
+      if (!process.env.STARTER_MODE || process.env.STARTER_MODE !== 'true') {
+        try {
+          await open(`http://${HOST}:${PORT}`);
+          logger.info('已自动打开浏览器');
+        } catch (e) {
+          logger.warn('无法自动打开浏览器，请手动访问');
+        }
       }
     });
   } catch (error) {

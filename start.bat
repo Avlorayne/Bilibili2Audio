@@ -24,6 +24,19 @@ if %errorlevel% neq 0 (
 for /f "tokens=*" %%i in ('node -v') do set NODE_VERSION=%%i
 echo ✅ Node.js版本: %NODE_VERSION%
 
+:: 优先使用 starter.js（启动管理器）
+if exist "starter.js" (
+    echo 🚀 正在启动启动管理器...
+    echo.
+    node starter.js
+    pause
+    exit /b 0
+)
+
+:: 回退到传统启动方式
+echo ⚠️  未找到 starter.js，回退到传统启动方式...
+echo.
+
 :: 检查npm依赖
 if not exist "node_modules" (
     echo 📦 正在安装依赖...
