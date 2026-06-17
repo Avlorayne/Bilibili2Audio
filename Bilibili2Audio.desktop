@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Bilibili2Audio
+Comment=视频转音频工具
+Exec=bash -c 'cd "$(dirname "%k")" && ./start-linux.sh'
+Icon=audio-x-generic
+Terminal=true
+Categories=AudioVideo;

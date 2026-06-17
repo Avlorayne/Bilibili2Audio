@@ -32,3 +32,6 @@ resources/ffmpeg/macos64/
 resources/ytdlp/win64/
 resources/ytdlp/linux64/
 resources/ytdlp/macos64/
+
+# Cookies file (user-specific)
+cookies.txt
