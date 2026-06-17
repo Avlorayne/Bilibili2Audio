@@ -205,17 +205,35 @@ async function runStartup() {
     setPhase('checking_env', 12, `平台: ${platform} ✓`);
     await sleep(500);
 
-    // Step 2: 检查/安装依赖
+    // Step 2: 检查/安装 npm 依赖
     const hasNodeModules = fs.existsSync(path.join(ROOT_DIR, 'node_modules'));
     if (!hasNodeModules) {
       setPhase('installing_deps', 15, 'node_modules 不存在，正在安装依赖...');
       await sleep(500);
       await runNpmInstall();
     } else {
-      // 检查 package-lock.json 是否存在
       const hasLock = fs.existsSync(path.join(ROOT_DIR, 'package-lock.json'));
       setPhase('installing_deps', 20, hasLock ? '依赖已安装 ✓' : '依赖检测通过 ✓');
       await sleep(600);
+    }
+
+    // Step 2.5: 检查 FFmpeg 和 yt-dlp，缺失则自动下载
+    const ffmpegResult = await ensureFFmpeg();
+    if (!ffmpegResult.available) {
+      setPhase('installing_deps', 30, `⚠️ FFmpeg: ${ffmpegResult.message}`);
+      await sleep(1000);
+    } else {
+      setPhase('installing_deps', 30, `FFmpeg ✓ (${ffmpegResult.source})`);
+      await sleep(400);
+    }
+
+    const ytdlpResult = await ensureYtdlp();
+    if (!ytdlpResult.available) {
+      setPhase('installing_deps', 38, `⚠️ yt-dlp: ${ytdlpResult.message}`);
+      await sleep(1000);
+    } else {
+      setPhase('installing_deps', 38, `yt-dlp ✓ (${ytdlpResult.source})`);
+      await sleep(400);
     }
 
     // Step 3: 启动后端
@@ -401,6 +419,269 @@ const server = app.listen(LAUNCHER_PORT, '127.0.0.1', () => {
 
   console.log('[Starter] 等待启动页面连接...');
 });
+
+// ========== FFmpeg / yt-dlp 检测与自动下载 ==========
+
+// 获取平台标识（与 dependency-service 保持一致）
+function getToolPlatform() {
+  const p = process.platform;
+  const a = process.arch;
+  if (p === 'win32') return 'win64';
+  if (p === 'darwin') return 'macos64';
+  return 'linux64';
+}
+
+// 平台对应的下载配置
+const DOWNLOAD_CONFIG = {
+  linux64: {
+    ffmpeg: { url: 'https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz', archive: 'tar.xz' },
+    ytdlp: { url: 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp', archive: 'bin' },
+  },
+  macos64: {
+    ffmpeg: { url: 'https://evermeet.cx/ffmpeg/ffmpeg-7.0.zip', archive: 'zip' },
+    ytdlp: { url: 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos', archive: 'bin' },
+  },
+  win64: {
+    ffmpeg: { url: 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip', archive: 'zip' },
+    ytdlp: { url: 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe', archive: 'bin' },
+  },
+};
+
+function getToolDir(tool) {
+  const platform = getToolPlatform();
+  return path.join(ROOT_DIR, 'resources', tool, platform);
+}
+
+function getBinaryName(tool) {
+  const isWin = process.platform === 'win32';
+  if (tool === 'ffmpeg') return isWin ? 'ffmpeg.exe' : 'ffmpeg';
+  return isWin ? 'yt-dlp.exe' : 'yt-dlp';
+}
+
+function getLocalBinaryPath(tool) {
+  return path.join(getToolDir(tool), getBinaryName(tool));
+}
+
+// 执行命令并返回 stdout
+function execTool(cmd, args) {
+  return new Promise((resolve, reject) => {
+    const cp = require('child_process');
+    cp.execFile(cmd, args, { timeout: 10000 }, (err, stdout) => {
+      if (err) reject(err);
+      else resolve(stdout);
+    });
+  });
+}
+
+// 检查 FFmpeg 可用性，缺失则自动下载
+async function ensureFFmpeg() {
+  // 1) 检查本地 resources 目录
+  const localPath = getLocalBinaryPath('ffmpeg');
+  if (fs.existsSync(localPath)) {
+    try {
+      const out = await execTool(localPath, ['-version']);
+      const ver = (out.match(/ffmpeg version (\S+)/) || [])[1] || 'ok';
+      return { available: true, path: localPath, source: `本地 ${ver}` };
+    } catch {
+      // 二进制损坏，重新下载
+    }
+  }
+
+  // 2) 检查系统 PATH
+  try {
+    const out = await execTool('ffmpeg', ['-version']);
+    const ver = (out.match(/ffmpeg version (\S+)/) || [])[1] || 'ok';
+    return { available: true, path: null, source: `系统 ${ver}` };
+  } catch {
+    // 系统也没有
+  }
+
+  // 3) 自动下载
+  const platform = getToolPlatform();
+  const cfg = DOWNLOAD_CONFIG[platform];
+  if (!cfg) {
+    return { available: false, message: `不支持的平台: ${platform}` };
+  }
+
+  setPhase('installing_deps', 25, `FFmpeg 未安装，正在下载...`);
+  try {
+    await downloadTool('ffmpeg');
+    // 验证
+    if (fs.existsSync(localPath)) {
+      const out = await execTool(localPath, ['-version']);
+      const ver = (out.match(/ffmpeg version (\S+)/) || [])[1] || 'ok';
+      return { available: true, path: localPath, source: `自动下载 ${ver}` };
+    }
+    return { available: false, message: '下载后验证失败，请手动安装 FFmpeg' };
+  } catch (err) {
+    return { available: false, message: `下载失败: ${err.message}` };
+  }
+}
+
+// 检查 yt-dlp 可用性，缺失则自动下载
+async function ensureYtdlp() {
+  // 1) 检查本地 resources 目录
+  const localPath = getLocalBinaryPath('yt-dlp');
+  if (fs.existsSync(localPath)) {
+    try {
+      const out = await execTool(localPath, ['--version']);
+      return { available: true, path: localPath, source: `本地 ${out.trim()}` };
+    } catch {
+      // 损坏
+    }
+  }
+
+  // 2) 检查系统 PATH
+  try {
+    const out = await execTool('yt-dlp', ['--version']);
+    return { available: true, path: null, source: `系统 ${out.trim()}` };
+  } catch {
+    // 系统也没有
+  }
+
+  // 3) 自动下载
+  const platform = getToolPlatform();
+  const cfg = DOWNLOAD_CONFIG[platform];
+  if (!cfg) {
+    return { available: false, message: `不支持的平台: ${platform}` };
+  }
+
+  setPhase('installing_deps', 35, `yt-dlp 未安装，正在下载...`);
+  try {
+    await downloadTool('yt-dlp');
+    if (fs.existsSync(localPath)) {
+      const out = await execTool(localPath, ['--version']);
+      return { available: true, path: localPath, source: `自动下载 ${out.trim()}` };
+    }
+    return { available: false, message: '下载后验证失败，请手动安装 yt-dlp' };
+  } catch (err) {
+    return { available: false, message: `下载失败: ${err.message}` };
+  }
+}
+
+// 下载工具（ffmpeg 或 yt-dlp）
+async function downloadTool(tool) {
+  const platform = getToolPlatform();
+  const cfg = DOWNLOAD_CONFIG[platform][tool];
+  const targetDir = getToolDir(tool);
+  const binName = getBinaryName(tool);
+
+  fs.mkdirSync(targetDir, { recursive: true });
+
+  if (cfg.archive === 'bin') {
+    // 直接下载二进制文件
+    setPhase('installing_deps', tool === 'ffmpeg' ? 27 : 36, `正在下载 ${tool}...`);
+    const tempPath = path.join(targetDir, `.${binName}.tmp`);
+    await downloadFile(cfg.url, tempPath, (pct) => {
+      setPhase('installing_deps',
+        tool === 'ffmpeg' ? Math.round(27 + pct * 0.03) : Math.round(36 + pct * 0.02),
+        `正在下载 ${tool}... ${Math.round(pct)}%`
+      );
+    });
+    // 移动到目标位置
+    fs.chmodSync(tempPath, 0o755);
+    fs.renameSync(tempPath, path.join(targetDir, binName));
+  } else {
+    // 下载压缩包
+    setPhase('installing_deps', tool === 'ffmpeg' ? 27 : 36, `正在下载 ${tool}...`);
+    const archPath = path.join(targetDir, `downloaded.${cfg.archive}`);
+    await downloadFile(cfg.url, archPath, (pct) => {
+      setPhase('installing_deps',
+        tool === 'ffmpeg' ? Math.round(27 + pct * 0.03) : Math.round(36 + pct * 0.02),
+        `正在下载 ${tool}... ${Math.round(pct)}%`
+      );
+    });
+    // 解压
+    setPhase('installing_deps', tool === 'ffmpeg' ? 30 : 37, `正在解压 ${tool}...`);
+    await extractArchive(archPath, targetDir, tool);
+    // 清理压缩包
+    try { fs.unlinkSync(archPath); } catch {}
+    // 查找解压出的二进制文件
+    if (!fs.existsSync(path.join(targetDir, binName))) {
+      // 递归搜索
+      const found = findFileRecursive(targetDir, binName);
+      if (found) {
+        fs.renameSync(found, path.join(targetDir, binName));
+      }
+    }
+    // 设置可执行权限
+    const finalPath = path.join(targetDir, binName);
+    if (fs.existsSync(finalPath)) {
+      try { fs.chmodSync(finalPath, 0o755); } catch {}
+    }
+  }
+}
+
+// 下载文件（支持进度回调）
+function downloadFile(url, destPath, onProgress) {
+  return new Promise((resolve, reject) => {
+    const axios = require('axios');
+    axios({
+      method: 'get',
+      url,
+      responseType: 'stream',
+      timeout: 120000,
+    }).then(response => {
+      const total = parseInt(response.headers['content-length'] || '0', 10);
+      let downloaded = 0;
+      const writer = fs.createWriteStream(destPath);
+
+      response.data.on('data', (chunk) => {
+        downloaded += chunk.length;
+        if (total > 0 && onProgress) {
+          onProgress(Math.min(99, (downloaded / total) * 100));
+        }
+      });
+
+      response.data.pipe(writer);
+
+      writer.on('finish', () => {
+        if (onProgress) onProgress(100);
+        resolve();
+      });
+      writer.on('error', reject);
+    }).catch(reject);
+  });
+}
+
+// 解压 .tar.xz 或 .zip
+function extractArchive(archPath, targetDir, tool) {
+  return new Promise((resolve, reject) => {
+    const isXz = archPath.endsWith('.tar.xz');
+    if (isXz) {
+      // Linux: tar -xf (直接处理 xz)
+      const { execFile } = require('child_process');
+      execFile('tar', ['-xf', archPath, '-C', targetDir], { timeout: 60000 }, (err) => {
+        if (err) reject(err);
+        else resolve();
+      });
+    } else {
+      // .zip: 用 unzipper
+      const unzipper = require('unzipper');
+      fs.createReadStream(archPath)
+        .pipe(unzipper.Extract({ path: targetDir }))
+        .on('close', resolve)
+        .on('error', reject);
+    }
+  });
+}
+
+// 递归查找文件
+function findFileRecursive(dir, filename) {
+  try {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        const found = findFileRecursive(full, filename);
+        if (found) return found;
+      } else if (entry.name === filename) {
+        return full;
+      }
+    }
+  } catch {}
+  return null;
+}
 
 // 优雅退出
 function shutdown() {
