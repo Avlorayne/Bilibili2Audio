@@ -1,0 +1,37 @@
+{
+  "name": "bilibili2audio",
+  "version": "1.0.0",
+  "description": "跨平台视频转音频工具，支持本地视频和B站链接",
+  "main": "src/backend/server.js",
+  "scripts": {
+    "start": "node src/backend/server.js",
+    "dev": "nodemon src/backend/server.js"
+  },
+  "keywords": [
+    "bilibili",
+    "video",
+    "audio",
+    "converter",
+    "ffmpeg"
+  ],
+  "author": "Bilibili2Audio Team",
+  "license": "MIT",
+  "dependencies": {
+    "express": "4.18.2",
+    "ws": "8.14.2",
+    "cors": "2.8.5",
+    "multer": "1.4.5-lts.1",
+    "open": "8.4.2",
+    "winston": "3.11.0",
+    "axios": "1.6.2",
+    "archiver": "6.0.1",
+    "unzipper": "0.10.14",
+    "uuid": "9.0.0"
+  },
+  "devDependencies": {
+    "nodemon": "3.0.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# Temp files
+temp/
+
+# Output files
+output/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Environment
+.env
+.env.local
+
+# FFmpeg binaries (auto-downloaded)
+resources/ffmpeg/win64/
+resources/ffmpeg/linux64/
+resources/ffmpeg/macos64/
+
+# yt-dlp binaries (auto-downloaded)
+resources/ytdlp/win64/
+resources/ytdlp/linux64/
+resources/ytdlp/macos64/
